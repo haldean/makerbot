@@ -1,22 +1,31 @@
-#define RED 0
-#define GREEN 1
-#define BLUE 2
-
-#define COLORLEDCOUNT 2
-#define CHANNELCOUNT 3
-
+/* Change these two definitions if you add or remove any
+ * LEDs */
+#define COLORLEDCOUNT 1
 #define FADELEDCOUNT 1
 
+/* This changes the minimum and maximum output level for the
+ * colored LEDs */
 #define RGBMIN 0
 #define RGBMAX 255
 
+/* The same as above, but for the normal LEDs */
 #define MONOMIN 0
 #define MONOMAX 255
+
+/* Don't change these */
+#define CHANNELCOUNT 3
+#define RED 0
+#define GREEN 1
+#define BLUE 2
 
 struct rgb {
   int r, g, b, rpin, gpin, bpin;
 };
 
+/* Change/add RGB LEDs here. The format is {Red Value, Green
+ * Value, Blue Value, Red Pin, Green Pin, Blue Pin} where
+ * the values only control the initial value. Each set of
+ * brackets should be followed by a comma */
 struct rgb color[COLORLEDCOUNT] = {
   {RGBMAX, RGBMIN, RGBMIN, 9, 10, 11}
 };
@@ -26,16 +35,25 @@ struct fade {
   bool inc;
 };
 
+/* Change/add normal LEDs here. The format is {Initial
+ * Value, Pin, Increasing}. */
 struct fade mono[FADELEDCOUNT] = {
   {MONOMIN, 3, true}
 };
 
-/* The delay between color changes. Set to zero to not wait
- * at the end of an iteration */
+/* The delay between color changes. Lower values mean faster
+ * fading. Set to zero to not wait at the end of an
+ * iteration. */
 unsigned int delaytime = 5;
 
-/* The value to change the color by on each iteration */
+/* The value to change the color by on each iteration. Lower
+ * values mean slower fading. Set this to zero to disable
+ * color fading. */
 unsigned int rgbdelta = 2;
+
+/* The value to change levels by on each iteration.  Lower
+ * values mean slower fading. Set this to zero to disable
+ * pulsing. */
 unsigned int fadedelta = 2;
 
 unsigned int i, j, k;
