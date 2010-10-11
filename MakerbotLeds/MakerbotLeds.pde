@@ -1,3 +1,6 @@
+/* -*- mode: c++ -*- */
+#include <Messenger.h>
+
 /* Change these two definitions if you add or remove any
  * LEDs */
 #define COLORLEDCOUNT 1
@@ -18,6 +21,8 @@
 #define GREEN 1
 #define BLUE 2
 
+#define DEBOUNCE 50
+
 struct rgb {
   int r, g, b, rpin, gpin, bpin;
 };
@@ -29,6 +34,8 @@ struct rgb {
 struct rgb color[COLORLEDCOUNT] = {
   {RGBMAX, RGBMIN, RGBMIN, 6, 5, 3}
 };
+
+struct rgb usercolor = {0, 0, 0, 6, 5, 3};
 
 struct fade {
   int level, pin;
@@ -44,19 +51,26 @@ struct fade mono[FADELEDCOUNT] = {
 /* The delay between color changes. Lower values mean faster
  * fading. Set to zero to not wait at the end of an
  * iteration. */
-unsigned int delaytime = 5;
+unsigned int delaytime = 30;
 
 /* The value to change the color by on each iteration. Lower
  * values mean slower fading. Set this to zero to disable
  * color fading. */
-unsigned int rgbdelta = 2;
+unsigned int rgbdelta = 1;
 
 /* The value to change levels by on each iteration.  Lower
  * values mean slower fading. Set this to zero to disable
  * pulsing. */
-unsigned int fadedelta = 2;
+unsigned int fadedelta = 1;
 
 unsigned int i, j, k;
+
+/* When this is false, everything is off. */
+boolean enablefade = true;
+
+Messenger ser = Messenger();
+
+long lastpress = 0;
 
 int stepmono(struct fade* output) {
   if (output->level <= MONOMIN || output->level >= MONOMAX)
@@ -111,25 +125,49 @@ int steprgb(struct rgb* output) {
   return 0;
 }
 
-void setcolor(struct rgb* output) {
-  unsigned int r, g, b;
-  r = (output->r > 254) ? 1 : 255 - output->r;
-  g = (output->g > 254) ? 1 : 255 - output->g;
-  b = (output->b > 254) ? 1 : 255 - output->b;
-  
-  analogWrite(output->rpin, r);
-  analogWrite(output->gpin, g);
-  analogWrite(output->bpin, b);
+void setcolor(struct rgb* output, boolean transform=true) {
+  if (transform) {
+    unsigned int r, g, b;
+
+    r = (output->r > 254) ? 1 : 255 - output->r;
+    g = (output->g > 254) ? 1 : 255 - output->g;
+    b = (output->b > 254) ? 1 : 255 - output->b;
+
+    analogWrite(output->rpin, r);
+    analogWrite(output->gpin, g);
+    analogWrite(output->bpin, b);
+  } else {
+    analogWrite(output->rpin, output->r);
+    analogWrite(output->gpin, output->g);
+    analogWrite(output->bpin, output->b);
+  }
 }
 
 void setmono(struct fade* output) {
   analogWrite(output->pin, output->level);
-  Serial.println(output->level);
+}
+
+/* Messages of the form "[enable] [red] [green] [blue]" are expected,
+ * where enable is 0 to set to autofade, and RGB values are in the
+ * interval [0,1023] */
+void message() {
+  if (ser.readInt() == 0) {
+    enablefade = true;
+    delaytime = ser.readInt();
+    rgbdelta = ser.readInt();
+    return;
+  }
+  enablefade = false;
+
+  /* Pay no attention to the order of these statements. */
+  usercolor.r = ser.readInt();
+  usercolor.g = ser.readInt();
+  usercolor.b = ser.readInt();
+
+  setcolor(&usercolor, false);
 }
 
 void setup() {
-  Serial.begin(9600);
-
   for (i=0; i<COLORLEDCOUNT; i++) {
     pinMode(color[i].rpin, OUTPUT);
     pinMode(color[i].gpin, OUTPUT);
@@ -139,18 +177,27 @@ void setup() {
   for (i=0; i<FADELEDCOUNT; i++) {
     pinMode(mono[i].pin, OUTPUT);
   }
+
+  Serial.begin(9600);
+  ser.attach(message);
 }
 
 void loop() {
-  for (i=0; i<COLORLEDCOUNT; i++) {
-    steprgb(&color[i]);
-    setcolor(&color[i]);
+  if (enablefade) {
+    for (i=0; i<COLORLEDCOUNT; i++) {
+      steprgb(&color[i]);
+      setcolor(&color[i]);
+    }
+
+    for (i=0; i<FADELEDCOUNT; i++) {
+      stepmono(&mono[i]);
+      setmono(&mono[i]);
+    }
+
+    delay(delaytime);
   }
 
-  for (i=0; i<FADELEDCOUNT; i++) {
-    stepmono(&mono[i]);
-    setmono(&mono[i]);
+  while (Serial.available()) {
+    ser.process(Serial.read());
   }
-
-  delay(delaytime);
 }
