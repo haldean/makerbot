@@ -2,10 +2,12 @@
 
 import serial
 import gtk
+import sys
 
 class colorselector(object):
-    def __init__(self):
-        self.leds = ledstrip()
+    def __init__(self, port=None):
+        if port: self.leds = ledstrip(port=port)
+        else: self.leds = ledstrip()
 
         window = gtk.Window()
         window.connect("destroy", gtk.main_quit)
@@ -58,5 +60,6 @@ class ledstrip(object):
         self.serial.write('0 %d %d\r' % (int(delay), int(delta)))
 
 if __name__ == "__main__":
-    colorselector()
+    if len(sys.argv) > 1: colorselector(sys.argv[1])
+    else: colorselector()
     gtk.main()

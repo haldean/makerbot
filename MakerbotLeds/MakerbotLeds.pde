@@ -45,7 +45,7 @@ struct fade {
 /* Change/add normal LEDs here. The format is {Initial
  * Value, Pin, Increasing}. */
 struct fade mono[FADELEDCOUNT] = {
-  {MONOMIN, 11, true}
+  {MONOMIN, 9, true}
 };
 
 /* The delay between color changes. Lower values mean faster
@@ -159,7 +159,6 @@ void message() {
   }
   enablefade = false;
 
-  /* Pay no attention to the order of these statements. */
   usercolor.r = ser.readInt();
   usercolor.g = ser.readInt();
   usercolor.b = ser.readInt();
